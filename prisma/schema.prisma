@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum EventType {
+  SENT
+  OPEN
+  CLICK
+  REPLY
+  FORM
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  image     String?
+  leads     Lead[]
+  campaigns Campaign[]
+  events    Event[]
+}
+
+model Lead {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  email       String
+  name        String
+  company     String?
+  role        String?
+  source      String?
+  token       String    @unique
+  lastContact DateTime?
+  nextStep    String?
+
+  events Event[]
+
+  @@unique([userId, email], name: "email_userId")
+  @@index([userId, email])
+}
+
+model Campaign {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  name      String
+  createdAt DateTime @default(now())
+
+  events Event[]
+}
+
+model Event {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id])
+
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id])
+
+  type EventType
+  meta Json?
+  ts   DateTime  @default(now())
+
+  @@index([campaignId, type])
+  @@index([userId, ts])
+}
